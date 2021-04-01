@@ -1,0 +1,27 @@
+# Drawing the pieces
+def drawPiecesFEN(screen, fen):
+  pieceSymbols = {
+    'k': pieces.king,
+    'p': pieces.pawn,
+    'n': pieces.knight,
+    'b': pieces.bishop,
+    'q': pieces.queen,
+    'r': pieces.rook
+  }
+  
+  file = 0
+  rank = 0 
+  
+  for symbol in fen:
+    if symbol == '/': 
+      file = 0
+      rank += 1
+    elif symbol.isdigit():
+      file += int(symbol)
+    else:
+      pieceColor = pieces.white if symbol.isupper() else pieces.black
+      pieceType = pieceSymbols[symbol.lower()]
+      
+      board.board[rank][file] = pieceColor | pieceType
+      screen.blit(pieces.images[pieceColor | pieceType], pygame.Rect(file * SQUARE_SIZE, rank * SQUARE_SIZE,SQUARE_SIZE,SQUARE_SIZE))
+      file += 1
