@@ -140,68 +140,143 @@ class Board:
       except:
         pass      
     
-    self.lookForCaptures(r, f, color, 'P', moves)
+    self.lookForCaptures(r, f, color, moves)
+    
+  def generateKnightMoves(self, r, f, moves):
+    targets = [(-2, -1), (-2, 1), (-1, -2), (-1, 2), (1, -2), (1, 2), (2, -1), (2, 1)] # the 8 squares a knight can go to
+    opponentColor = 'b' if self.whiteToMove else 'w' # assigns opponentColor based on whiteToMove
+    
+    for t in targets:
+      # adds the all possible squares in a direction
+      targetRow = r + t[0] 
+      targetCol = f + t[1]
+      if 0 <= targetRow < 8 and 0 <= targetCol < 8: # makes sure the square is on the board
+        targetPiece = self.board[targetRow][targetCol]
+        if targetPiece == 0: # Empty Space
+          moves.append(Move((r, f), (targetRow, targetCol), self)) # Adds the move to the possible moves
+        elif self.BinaryToPieces[targetPiece][0] == opponentColor: # Checks if the piece is an enemy piece
+          moves.append(Move((r, f), (targetRow, targetCol), self)) # Adds the move to the possible moves
+          pass 
+        else: # Friendly piece
+          pass
+      else: # The square is off the board
+        pass
+    
+    
+  def generateDiagonalMoves(self, r, f, moves):
+    # For Bishop and Queen
+    directions = [(-1, -1), (-1, 1), (1, -1), (1, 1)] # 4 diagonals
+    opponentColor = 'b' if self.whiteToMove else 'w' # assigns opponentColor based on whiteToMove
+    
+    for d in directions:
+      for i in range(1, 8):
+        # adds the all possible squares in a direction
+        targetRow = r + d[0] * i 
+        targetCol = f + d[1] * i
+        if 0 <= targetRow < 8 and 0 <= targetCol < 8: # makes sure the square is on the board
+          targetPiece = self.board[targetRow][targetCol]
+          if targetPiece == 0: # Empty Space
+            moves.append(Move((r, f), (targetRow, targetCol), self)) # Adds the move to the possible moves
+          elif self.BinaryToPieces[targetPiece][0] == opponentColor: # Checks if the piece is an enemy piece
+            moves.append(Move((r, f), (targetRow, targetCol), self)) # Adds the move to the possible moves
+            break # No need to look beyond a piece
+          else: # Friendly piece
+            break # No need to look beyond a piece
+        else: # The square is off the board
+          break
+          
+  def generateSlidingMoves(self, r, f, moves):
+    # For Rook and Queen
+    directions = [(-1, 0), (0, -1), (1, 0), (0, 1)] # Up, left, down, right
+    opponentColor = 'b' if self.whiteToMove else 'w' # assigns opponentColor based on whiteToMove
+    
+    for d in directions:
+      for i in range(1, 8):
+        # adds the all possible squares in a direction
+        targetRow = r + d[0] * i 
+        targetCol = f + d[1] * i
+        if 0 <= targetRow < 8 and 0 <= targetCol < 8: # makes sure the square is on the board
+          targetPiece = self.board[targetRow][targetCol]
+          if targetPiece == 0: # Empty Space
+            moves.append(Move((r, f), (targetRow, targetCol), self)) # Adds the move to the possible moves
+          elif self.BinaryToPieces[targetPiece][0] == opponentColor: # Checks if the piece is an enemy piece
+            moves.append(Move((r, f), (targetRow, targetCol), self)) # Adds the move to the possible moves
+            break # No need to look beyond a piece
+          else: # Friendly piece
+            break # No need to look beyond a piece
+        else: # The square is off the board
+          break
   
-  def generateDiagonalMoves(self, r, f, pieceColor, moves):
-    if pieceColor == 'w':
-      startRow = r
-      startCol = f
-      while f >= 0:
-        if self.board[r - 1][f - 1] == 0:
-          moves.append(Move((startRow, startCol), (r - 1, f - 1), self))
-        r = r - 1
-        f = f - 1
-      r = startRow
-      f = startCol
-      while f < 7 and r < 7:
-        if self.board[r + 1][f + 1] == 0:
-          moves.append(Move((startRow, startCol), (r - 1, f - 1), self))
-        r = r + 1
-        f = f + 1
-      
+  def generateKingMoves(self, r, f, moves):
+    directions = [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, -1)] # 8 squares around a king
+    opponentColor = 'b' if self.whiteToMove else 'w' # assigns opponentColor based on whiteToMove
+    
+    for d in directions:
+      # adds the all possible squares in a direction
+      targetRow = r + d[0] 
+      targetCol = f + d[1]
+      if 0 <= targetRow < 8 and 0 <= targetCol < 8: # makes sure the square is on the board
+        targetPiece = self.board[targetRow][targetCol]
+        if targetPiece == 0: # Empty Space
+          moves.append(Move((r, f), (targetRow, targetCol), self)) # Adds the move to the possible moves
+        elif self.BinaryToPieces[targetPiece][0] == opponentColor: # Checks if the piece is an enemy piece
+          moves.append(Move((r, f), (targetRow, targetCol), self)) # Adds the move to the possible moves
+          pass 
+        else: # Friendly piece
+          pass
+      else: # The square is off the board
+        pass
+    
   
-  def lookForCaptures(self, r, f, color, pieceType, moves):
-    if pieceType == 'P': # Pawn Captures
-      if color == 'w':
-        # Checks if the pawn is on any edge 
-        if f == 0:
-          if self.board[r - 1][f + 1] > 16:
-            moves.append(Move((r, f), (r - 1, f + 1), self))
+  def lookForCaptures(self, r, f, color, moves):
+    # Pawn Captures
+    if color == 'w':
+      # Checks if the pawn is on any edge 
+      if f == 0:
+        if self.board[r - 1][f + 1] > 16:
+          moves.append(Move((r, f), (r - 1, f + 1), self))
+      elif f == 7:
+        if self.board[r - 1][f - 1] > 16:
+          moves.append(Move((r, f), (r - 1, f - 1), self))
+      else:
+        # looks at both diagonal squares for captures
+        if self.board[r - 1][f + 1] > 16:
+          moves.append(Move((r, f), (r - 1, f + 1), self))
+        if self.board[r - 1][f - 1] > 16:
+          moves.append(Move((r, f), (r - 1, f - 1), self))
+            
+    elif color == 'b':
+        if r == 0:
+          pass
+        # Checks if the pawn is on any edge
+        elif f == 0:
+          if self.board[r + 1][f + 1] < 16 and self.board[r + 1][f + 1] != 0:
+            moves.append(Move((r, f), (r + 1, f + 1), self))
         elif f == 7:
-          if self.board[r - 1][f - 1] > 16:
-            moves.append(Move((r, f), (r - 1, f - 1), self))
-        else:
-          # looks at both diagonal squares for captures
-          if self.board[r - 1][f + 1] > 16:
-            moves.append(Move((r, f), (r - 1, f + 1), self))
-          if self.board[r - 1][f - 1] > 16:
-            moves.append(Move((r, f), (r - 1, f - 1), self))
-              
-      elif color == 'b':
-          if r == 0:
-            pass
-          # Checks if the pawn is on any edge
-          elif f == 0:
+          if self.board[r + 1][f - 1] < 16 and self.board[r + 1][f - 1] != 0:
+            moves.append(Move((r, f), (r + 1, f - 1), self))
+        else: 
+          try:
+            # looks at both diagonal squares for captures
             if self.board[r + 1][f + 1] < 16 and self.board[r + 1][f + 1] != 0:
               moves.append(Move((r, f), (r + 1, f + 1), self))
-          elif f == 7:
             if self.board[r + 1][f - 1] < 16 and self.board[r + 1][f - 1] != 0:
               moves.append(Move((r, f), (r + 1, f - 1), self))
-          else: 
-            try:
-              # looks at both diagonal squares for captures
-              if self.board[r + 1][f + 1] < 16 and self.board[r + 1][f + 1] != 0:
-                moves.append(Move((r, f), (r + 1, f + 1), self))
-              if self.board[r + 1][f - 1] < 16 and self.board[r + 1][f - 1] != 0:
-                moves.append(Move((r, f), (r + 1, f - 1), self))
-            except:
-              pass
+          except:
+            pass
   
   def generatePieceMoves(self, r, f, pieceColor, pieceType, moves):
     if pieceType == 'P':
       self.generatePawnMoves(r, f, pieceColor, moves)
-    if pieceType == 'B':
-      self.generateDiagonalMoves(r, f, pieceColor, moves)
+    if pieceType == 'B' or pieceType == 'Q':
+      self.generateDiagonalMoves(r, f, moves)
+    if pieceType == 'R' or pieceType == 'Q':
+      self.generateSlidingMoves(r, f, moves)
+    if pieceType == 'N':
+      self.generateKnightMoves(r, f, moves)
+    if pieceType == 'K':
+      self.generateKingMoves(r, f, moves)
+      
     return []
 
   def getValidMoves(self):

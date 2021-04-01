@@ -47,8 +47,7 @@ def drawGame(screen, validMoves, squareSelected):
   drawBoard(screen)
   highlightSquares(screen, board.board, validMoves, squareSelected)
   drawPieces(screen)
-  
-  
+   
 # Initialising the Window
 def main():
   # Variables needed for pygame
