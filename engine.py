@@ -72,6 +72,15 @@ class Board:
     self.whiteToMove = True
     # Keeps a list of Move objects used in undoing a move or several
     self.moveLog = []
+    # White and blacks kings positions will be used in checks and castling
+    # Updated in makeMove and undoMove
+    self.wKingPos = (7, 4) # Row, Col in internal board
+    self.bKingPos = (0, 4) # Row, Col in internal board
+    
+    self.inCheck = False
+    self.pins = []
+    self.checks = []
+   
    
   # Returns the Color, Type of a piece ex: 'w', 'P'
   def getPieceData(self, piece):
@@ -84,7 +93,12 @@ class Board:
     self.board[move.endRow][move.endCol] = move.pieceMoved # places the piece to move in the target square
     self.moveLog.append(move) # appends the move to the move log used for undoMove()
     self.whiteToMove = not self.whiteToMove # switches the turn
-  
+    # Update Kings location
+    if move.pieceMoved == 9:
+      self.wKingPos = (move.endRow, move.endCol)
+    elif move.pieceMoved == 17:
+      self.bKingPos = (move.endRow, move.endCol)
+      
   # A Move is undone by drawing whatever was on the target square and return the piece to the starting square
   def undoMove(self):
     try:
@@ -93,6 +107,11 @@ class Board:
       self.board[undo.endRow][undo.endCol] = undo.pieceCaptured # redraws the piece captured in its initial position
       self.moveLog.pop() # removes the last move after its undone
       self.whiteToMove = not self.whiteToMove # switches the turn
+      # Update Kings location
+      if undo.pieceMoved == 9:
+        self.wKingPos = (undo.endRow, undo.endCol)
+      elif undo.pieceMoved == 17:
+        self.bKingPos = (undo.endRow, undo.endCol)  
     except:
       return  
   
@@ -209,25 +228,25 @@ class Board:
   
   def generateKingMoves(self, r, f, moves):
     directions = [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, -1)] # 8 squares around a king
-    opponentColor = 'b' if self.whiteToMove else 'w' # assigns opponentColor based on whiteToMove
+    opponentColor = 'b' if self.whiteToMove else 'w'
     
     for d in directions:
       # adds the all possible squares in a direction
       targetRow = r + d[0] 
       targetCol = f + d[1]
       if 0 <= targetRow < 8 and 0 <= targetCol < 8: # makes sure the square is on the board
-        targetPiece = self.board[targetRow][targetCol]
-        if targetPiece == 0: # Empty Space
-          moves.append(Move((r, f), (targetRow, targetCol), self)) # Adds the move to the possible moves
-        elif self.BinaryToPieces[targetPiece][0] == opponentColor: # Checks if the piece is an enemy piece
-          moves.append(Move((r, f), (targetRow, targetCol), self)) # Adds the move to the possible moves
-          pass 
-        else: # Friendly piece
-          pass
+        piece = self.board[targetRow][targetCol]
+        pieceColor, pieceType = self.getPieceData(piece)
+        
+        if not self.isAttacked(targetRow, targetCol):
+          if piece == 0:
+            moves.append(Move((r, f), (targetRow, targetCol), self))
+          elif pieceColor == opponentColor:
+            moves.append(Move((r, f), (targetRow, targetCol), self))
+
       else: # The square is off the board
         pass
-    
-  
+      
   def lookForCaptures(self, r, f, color, moves):
     # Pawn Captures
     if color == 'w':
@@ -274,15 +293,171 @@ class Board:
       self.generateSlidingMoves(r, f, moves)
     if pieceType == 'N':
       self.generateKnightMoves(r, f, moves)
-    if pieceType == 'K':
-      self.generateKingMoves(r, f, moves)
+    #if pieceType == 'K':
+     # self.generateKingMoves(r, f, moves)
       
     return []
 
   def getValidMoves(self):
-    # To add checks and checking legal moves
-    return self.generateAllMoves()
+    self.inCheck, self.pins, self.checks = self.lookForChecksPins()
+    print(self.inCheck, self.pins, self.checks)
+    if self.whiteToMove:
+      kingR = self.wKingPos[0]
+      kingC = self.wKingPos[1]
+    else:
+      kingR = self.bKingPos[0]
+      kingC = self.bKingPos[1]
+    
+    if self.inCheck:
+      if len(self.checks) == 1:
+        moves = self.generateAllMoves()
+        check = self.checks[0]
+        checkR = check[0]
+        checkC = check[1]
+        checkPiece = self.board[checkR][checkC]
+        checkPieceColor, checkPieceType = self.getPieceData(checkPiece)
+        validSquares = []
+        
+        if checkPieceType == 'N':
+          validSquares = [(checkR, checkC)]
+        else:
+          for i in range(1, 8):
+            validSquare = (kingR + check[2] * i, kingC + check[3] * i)
+            validSquares.append(validSquare)
+            if validSquare[0] == checkR and validSquare[1] == checkC:
+              break
+        
+        for i in range(len(moves) - 1, -1, -1):
+          if moves[i].pieceMoved != 9 or moves[i].pieceMoved != 17:
+            if not (moves[i].endRow, moves[i].endCol) in validSquares:
+              moves.remove(moves[i])
+        self.generateKingMoves(kingR, kingC, moves)
+      else:
+        moves = []
+        self.generateKingMoves(kingR, kingC, moves)
+    else:
+      moves = self.generateAllMoves()
+      self.generateKingMoves(kingR, kingC, moves)
+    
+    return moves
+
+  def lookForChecksPins(self):
+    pins = []
+    checks = []
+    inCheck = False
+    
+    if self.whiteToMove:
+      opponentColor = 'b'
+      startRow = self.wKingPos[0]
+      startCol = self.wKingPos[1]
+    else:
+      opponentColor = 'w'
+      startRow = self.bKingPos[0]
+      startCol = self.bKingPos[1]
+    
+    directions = [(-1, 0), (0, -1), (1, 0), (0, 1), (-1, -1), (-1, 1), (1, -1), (1, 1)]
+    
+    for j in range(len(directions)):
+      d = directions[j]
+      maybePinned = ()
+      for i in range(1, 8):
+        endRow = startRow + d[0] * i
+        endCol = startCol + d[1] * i
+        
+        if 0 <= endRow < 8 and 0 <= endCol < 8:
+          if self.board[endRow][endCol] != 0:
+            piece = self.board[endRow][endCol]
+            pieceColor, pieceType = self.getPieceData(piece)
+            
+            if pieceColor != opponentColor:
+              if maybePinned == ():
+                maybePinned = (endRow, endCol, d[0], d[1])
+              else:
+                break
+            elif pieceColor == opponentColor:
+              if (
+                pieceType == 'Q' or
+                pieceType == 'R' and 0 <= j <= 3 or 
+                pieceType == 'B' and 4 <= j <= 7 or 
+                pieceType == 'P' and i == 1 and ((opponentColor == 'w' and 6 <= j <= 7) or (opponentColor == 'b' and 4 <= j <= 5)) or
+                pieceType == 'K' and i == 1
+              ):
+                if maybePinned == ():
+                    inCheck == True
+                    checks.append((endRow, endCol, d[0], d[1]))
+                    break
+                else:
+                  pins.append(maybePinned)
+              else:
+                break
+        else:
+          break
+    
+    knightDirections = [(-2, -1), (-2, 1), (-1, -2), (-1, 2), (1, -2), (1, 2), (2, -1), (2, 1)]
+    
+    for n in knightDirections:
+      endRow = startRow + n[0]
+      endCol = startCol + n[1]
       
+      if 0 <= endRow < 8 and 0 <= endCol < 8:
+        piece = self.board[endRow][endCol]
+        pieceColor, pieceType = self.getPieceData(piece)
+        
+        if pieceType == 'N' and pieceColor == opponentColor:
+          inCheck == True
+          checks.append((endRow, endCol, n[0], n[1]))
+    
+    if len(checks) > 0:
+      inCheck = True
+    
+    return inCheck, pins, checks
+
+  def isAttacked(self, r, c):
+    directions = [(-1, 0), (0, -1), (1, 0), (0, 1), (-1, -1), (-1, 1), (1, -1), (1, 1)]
+    opponentColor = 'b' if self.whiteToMove else 'w'
+      
+    for j in range(len(directions)):
+      d = directions[j]
+      for i in range(1, 8):
+        endRow = r + d[0] * i
+        endCol = c + d[1] * i
+        
+        if 0 <= endRow < 8 and 0 <= endCol < 8:
+          if self.board[endRow][endCol] != 0:
+            piece = self.board[endRow][endCol]
+            pieceColor, pieceType = self.getPieceData(piece)
+            
+            if pieceColor != opponentColor:
+              break
+            elif pieceColor == opponentColor:
+              if (
+                pieceType == 'Q' or
+                pieceType == 'R' and 0 <= j <= 3 or 
+                pieceType == 'B' and 4 <= j <= 7 or 
+                pieceType == 'P' and i == 1 and ((opponentColor == 'w' and 6 <= j <= 7) or (opponentColor == 'b' and 4 <= j <= 5)) or
+                pieceType == 'K' and i == 1
+              ):
+                return True
+              else:
+                break
+        else:
+          break
+  
+      knightDirections = [(-2, -1), (-2, 1), (-1, -2), (-1, 2), (1, -2), (1, 2), (2, -1), (2, 1)]
+      
+      for n in knightDirections:
+        endRow = r + n[0]
+        endCol = c + n[1]
+        
+        if 0 <= endRow < 8 and 0 <= endCol < 8:
+          piece = self.board[endRow][endCol]
+          pieceColor, pieceType = self.getPieceData(piece)
+          
+          if pieceType == 'N' and pieceColor == opponentColor:
+            return True
+          
+    return False
+
 class Move(Board):
   RanksToRows = {
     '1': 7,

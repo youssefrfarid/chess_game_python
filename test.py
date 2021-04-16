@@ -1,1 +1,1 @@
-print('Omar Noob!!')
+print(3//2)

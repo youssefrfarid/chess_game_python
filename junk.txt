@@ -25,3 +25,13 @@ def drawPiecesFEN(screen, fen):
       board.board[rank][file] = pieceColor | pieceType
       screen.blit(pieces.images[pieceColor | pieceType], pygame.Rect(file * SQUARE_SIZE, rank * SQUARE_SIZE,SQUARE_SIZE,SQUARE_SIZE))
       file += 1
+
+
+targetPiece = self.board[targetRow][targetCol]
+        if targetPiece == 0: # Empty Space
+          moves.append(Move((r, f), (targetRow, targetCol), self)) # Adds the move to the possible moves
+        elif self.BinaryToPieces[targetPiece][0] == opponentColor: # Checks if the piece is an enemy piece
+          moves.append(Move((r, f), (targetRow, targetCol), self)) # Adds the move to the possible moves
+          pass 
+        else: # Friendly piece
+          pass
